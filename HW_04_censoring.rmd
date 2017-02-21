@@ -1,0 +1,111 @@
+---
+title: "SPPH 581c - Assignment 4"
+author: "Patrick Daniele"
+date: "February 20, 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<p>I'm going to complete this as an R-Markdown document as some of the packages I use require R-Studio and a very up to date version of R.</p>
+
+
+<p>Load Libraries </p>
+```{r cars}
+library(survival)
+library(tidyverse)
+library(survminer)
+library(ggfortify)
+```
+<p>Incase you haven't seen it before, the "Tidyverse" is a set of packages that makes using R much better.</p>
+
+
+<p>Import the data and basic tidying</p>
+```{r}
+data <- read.csv('C:/Users/pdaniele/Desktop/SPPH 581c/Assignment 4/alzheimers.csv', header=T)
+str(data)
+
+#Note to self, dates are factors. I don't think we need them, so I won't do anything about them now.
+
+#Change drug to a factor
+data <- data %>% 
+  mutate(drug=factor(drug))
+
+# Change it to a tibble for easier processing
+data <- as_data_frame(data)
+data
+```
+
+<p> Three majors sections:</p>
+
+<ol>
+  <li>Non-Parametric: Kaplan Meier Estimates</li>
+  <li>Semi-Parametric: Cox Proportional Hazards Model</li>
+  <li>Fully Parametric: Weibull or Fully Distributional Model</li>
+</ol>
+
+
+<h1>Non-Parametric</h1>
+```{r}
+## Overall
+fit_KM <- survfit(Surv(time, censor) ~ 1, data)
+
+fit_KM %>% 
+  summary()
+
+## Try different survival plot methods
+#Extensions of GGPlot2
+
+fit_KM %>% 
+  ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
+
+fit_KM %>% 
+  autoplot(conf.int=F)
+
+## By Drug
+fit_KM_drug <- survfit(Surv(time, censor) ~ drug, data)
+
+fit_KM_drug %>% 
+  summary()
+
+## Try different survival plot methods
+fit_KM_drug %>% 
+  autoplot(conf.int=F)
+
+fit_KM_drug %>% 
+  ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
+```
+
+<h1>Semi-Parametric</h1>
+```{r}
+coxfit1 <- coxph(Surv(time, censor) ~ drug, data)
+coxfit1 %>% 
+  summary()
+
+autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
+
+## Need to Assess the Proportional Hazards Assumption
+coxfit1 %>% 
+  cox.zph()
+
+## Looks OK to me. Check Schoenfeld/Martingale Residuals next.
+```
+
+<h1>Fully-Parametric (Accelerated Failure Time Models)</h1>
+```{r}
+#Exponential Distribution
+fit_AFT_exp <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='exponential')
+fit_AFT_exp %>% 
+  summary()
+
+#Weibull Distribution
+fit_AFT_W <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='weibull')
+fit_AFT_W %>% 
+  summary()
+
+#Lognormal
+fit_AFT_lognorm <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='lognormal')
+fit_AFT_lognorm %>% 
+  summary()
+```

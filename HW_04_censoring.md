@@ -29,10 +29,11 @@ library(tidyverse)
 ``` r
 library(survminer)
 library(ggfortify)
+library(flexsurv)
 ```
 
 <p>
-Incase you haven't seen it before, the "Tidyverse" is a set of packages that makes using R much better.
+Incase you haven't seen it before, the "tidyverse" is a set of packages that makes using R much better (In my opinion).
 </p>
 <p>
 Import the data and basic tidying
@@ -79,6 +80,40 @@ data
     ## # ... with 92 more rows
 
 <p>
+Basic data exploration
+</p>
+``` r
+## Checking normality of Age.
+hist(data$age)
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-2-1.png)
+
+``` r
+## Looks good to me
+
+#Checking how many had events
+table(data$censor)
+```
+
+    ## 
+    ##  0  1 
+    ## 20 82
+
+``` r
+## Checking How many on each drug
+table(data$drug)
+```
+
+    ## 
+    ##  0  1 
+    ## 51 51
+
+``` r
+## Balanced!
+```
+
+<p>
 Three majors sections:
 </p>
 <ol>
@@ -89,7 +124,7 @@ Non-Parametric: Kaplan Meier Estimates
 Semi-Parametric: Cox Proportional Hazards Model
 </li>
 <li>
-Fully Parametric: Weibull or Fully Distributional Model
+Fully Parametric: Weibull, Exponential, Log-Normal, Log-Logistic
 </li>
 </ol>
 <h1>
@@ -143,14 +178,14 @@ fit_KM %>%
   ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-2-1.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
 ``` r
 fit_KM %>% 
   autoplot(conf.int=F)
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-2-2.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-2.png)
 
 ``` r
 ## By Drug
@@ -210,24 +245,48 @@ fit_KM_drug %>%
     ##    26      2       1   0.0449  0.0409      0.00752        0.268
 
 ``` r
+survdiff(Surv(time, censor) ~ drug, data)
+```
+
+    ## Call:
+    ## survdiff(formula = Surv(time, censor) ~ drug, data = data)
+    ## 
+    ##         N Observed Expected (O-E)^2/E (O-E)^2/V
+    ## drug=0 51       42     54.8      2.98      10.9
+    ## drug=1 51       40     27.2      5.98      10.9
+    ## 
+    ##  Chisq= 10.9  on 1 degrees of freedom, p= 0.000971
+
+``` r
 ## Try different survival plot methods
 fit_KM_drug %>% 
   autoplot(conf.int=F)
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-2-3.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-3.png)
 
 ``` r
 fit_KM_drug %>% 
   ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-2-4.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-4.png)
+
+``` r
+## Let's get both the by drug and overall on the same plot
+plot(fit_KM, conf.int=F, xlab='Time (Months)', ylab='Survival', lwd=2)
+lines(fit_KM_drug, lty=c(2,2), lwd=c(2,2), col=c("#8E8E8E","#5CB2C8"))
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+text(40, 1, 'Log-rank p=0.000971')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-5.png)
 
 <h1>
 Semi-Parametric
 </h1>
 ``` r
+## Without Age
 coxfit1 <- coxph(Surv(time, censor) ~ drug, data)
 coxfit1 %>% 
   summary()
@@ -253,45 +312,96 @@ coxfit1 %>%
     ## Score (logrank) test = 11.21  on 1 df,   p=0.0008131
 
 ``` r
+## With Age
+coxfit2 <- coxph(Surv(time, censor) ~ drug + age, data)
+coxfit2 %>% 
+  summary()
+```
+
+    ## Call:
+    ## coxph(formula = Surv(time, censor) ~ drug + age, data = data)
+    ## 
+    ##   n= 102, number of events= 82 
+    ## 
+    ##          coef exp(coef) se(coef)     z Pr(>|z|)    
+    ## drug1 0.86223   2.36844  0.24418 3.531 0.000414 ***
+    ## age   0.08749   1.09143  0.01760 4.971 6.66e-07 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ##       exp(coef) exp(-coef) lower .95 upper .95
+    ## drug1     2.368     0.4222     1.468     3.822
+    ## age       1.091     0.9162     1.054     1.130
+    ## 
+    ## Concordance= 0.699  (se = 0.042 )
+    ## Rsquare= 0.293   (max possible= 0.997 )
+    ## Likelihood ratio test= 35.3  on 2 df,   p=2.164e-08
+    ## Wald test            = 34.09  on 2 df,   p=3.965e-08
+    ## Score (logrank) test = 35.52  on 2 df,   p=1.938e-08
+
+``` r
+## Check model Fit and Assumptions (PH)
+coxfit1 %>% 
+    AIC()
+```
+
+    ## [1] 600.3902
+
+``` r
+coxfit1 %>% 
+  cox.zph() %>% 
+  plot()
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-1.png)
+
+``` r
+coxfit2 %>% 
+    AIC()
+```
+
+    ## [1] 577.7488
+
+``` r
+coxfit2 %>% 
+  cox.zph() %>% 
+  plot()
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-2.png)![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-3.png)
+
+``` r
+## Global test looks good. Plots look OK to me. Check Schoenfeld/Martingale Residuals next.
+##Age improves fit.
+
+## Plotting survival for the drug=1 group.
+
 autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
 ```
 
     ## Warning in model.frame.default(Terms2, data = newdata, na.action =
     ## na.action, : variable 'drug' is not a factor
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-1.png)
-
-``` r
-## Need to Assess the Proportional Hazards Assumption
-coxfit1 %>% 
-  cox.zph()
-```
-
-    ##           rho chisq     p
-    ## drug1 -0.0603 0.283 0.595
-
-``` r
-## Looks OK to me. Check Schoenfeld/Martingale Residuals next.
-```
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-4.png)
 
 <h1>
-Fully-Parametric (Accelerated Failure Time Models)
+Fully-Parametric
 </h1>
 ``` r
 #Exponential Distribution
-fit_AFT_exp <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='exponential')
+fit_AFT_exp <- survreg(Surv(time, censor) ~ drug + age, data, dist='exponential')
 fit_AFT_exp %>% 
   summary()
 ```
 
     ## 
     ## Call:
-    ## survreg(formula = Surv(time, censor) ~ as.factor(drug) + age, 
-    ##     data = data, dist = "exponential")
-    ##                    Value Std. Error     z        p
-    ## (Intercept)       5.9983     0.5910 10.15 3.35e-24
-    ## as.factor(drug)1 -0.8945     0.2214 -4.04 5.35e-05
-    ## age              -0.0878     0.0158 -5.54 2.95e-08
+    ## survreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "exponential")
+    ##               Value Std. Error     z        p
+    ## (Intercept)  5.9983     0.5910 10.15 3.35e-24
+    ## drug1       -0.8945     0.2214 -4.04 5.35e-05
+    ## age         -0.0878     0.0158 -5.54 2.95e-08
     ## 
     ## Scale fixed at 1 
     ## 
@@ -302,21 +412,28 @@ fit_AFT_exp %>%
     ## n= 102
 
 ``` r
+fit_AFT_exp %>% 
+    AIC()
+```
+
+    ## [1] 556.8394
+
+``` r
 #Weibull Distribution
-fit_AFT_W <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='weibull')
+fit_AFT_W <- survreg(Surv(time, censor) ~ drug + age, data, dist='weibull')
 fit_AFT_W %>% 
   summary()
 ```
 
     ## 
     ## Call:
-    ## survreg(formula = Surv(time, censor) ~ as.factor(drug) + age, 
-    ##     data = data, dist = "weibull")
-    ##                    Value Std. Error     z        p
-    ## (Intercept)       5.9745     0.5161 11.58 5.49e-31
-    ## as.factor(drug)1 -0.9135     0.1938 -4.71 2.44e-06
-    ## age              -0.0863     0.0139 -6.22 4.85e-10
-    ## Log(scale)       -0.1348     0.0837 -1.61 1.07e-01
+    ## survreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "weibull")
+    ##               Value Std. Error     z        p
+    ## (Intercept)  5.9745     0.5161 11.58 5.49e-31
+    ## drug1       -0.9135     0.1938 -4.71 2.44e-06
+    ## age         -0.0863     0.0139 -6.22 4.85e-10
+    ## Log(scale)  -0.1348     0.0837 -1.61 1.07e-01
     ## 
     ## Scale= 0.874 
     ## 
@@ -327,21 +444,28 @@ fit_AFT_W %>%
     ## n= 102
 
 ``` r
+fit_AFT_W %>% 
+    AIC()
+```
+
+    ## [1] 556.4227
+
+``` r
 #Lognormal
-fit_AFT_lognorm <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='lognormal')
+fit_AFT_lognorm <- survreg(Surv(time, censor) ~ drug + age, data, dist='lognormal')
 fit_AFT_lognorm %>% 
   summary()
 ```
 
     ## 
     ## Call:
-    ## survreg(formula = Surv(time, censor) ~ as.factor(drug) + age, 
-    ##     data = data, dist = "lognormal")
-    ##                    Value Std. Error      z        p
-    ## (Intercept)       5.3276     0.6017  8.854 8.47e-19
-    ## as.factor(drug)1 -0.8005     0.2176 -3.679 2.34e-04
-    ## age              -0.0828     0.0162 -5.116 3.11e-07
-    ## Log(scale)        0.0477     0.0784  0.609 5.43e-01
+    ## survreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "lognormal")
+    ##               Value Std. Error      z        p
+    ## (Intercept)  5.3276     0.6017  8.854 8.47e-19
+    ## drug1       -0.8005     0.2176 -3.679 2.34e-04
+    ## age         -0.0828     0.0162 -5.116 3.11e-07
+    ## Log(scale)   0.0477     0.0784  0.609 5.43e-01
     ## 
     ## Scale= 1.05 
     ## 
@@ -350,3 +474,155 @@ fit_AFT_lognorm %>%
     ##  Chisq= 33.66 on 2 degrees of freedom, p= 4.9e-08 
     ## Number of Newton-Raphson Iterations: 4 
     ## n= 102
+
+``` r
+fit_AFT_lognorm %>% 
+    AIC()
+```
+
+    ## [1] 555.3876
+
+``` r
+#Lognormal
+fit_AFT_loglog <- survreg(Surv(time, censor) ~ drug + age, data, dist='loglogistic')
+fit_AFT_loglog %>% 
+  summary()
+```
+
+    ## 
+    ## Call:
+    ## survreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "loglogistic")
+    ##               Value Std. Error     z        p
+    ## (Intercept)  5.5027     0.5834  9.43 4.02e-21
+    ## drug1       -0.8293     0.2161 -3.84 1.24e-04
+    ## age         -0.0863     0.0157 -5.50 3.71e-08
+    ## Log(scale)  -0.5096     0.0910 -5.60 2.12e-08
+    ## 
+    ## Scale= 0.601 
+    ## 
+    ## Log logistic distribution
+    ## Loglik(model)= -274.2   Loglik(intercept only)= -292.4
+    ##  Chisq= 36.39 on 2 degrees of freedom, p= 1.3e-08 
+    ## Number of Newton-Raphson Iterations: 4 
+    ## n= 102
+
+``` r
+fit_AFT_loglog %>% 
+    AIC()
+```
+
+    ## [1] 556.4383
+
+``` r
+## Not much difference in terms of AIC between the models. No clear winner. I would default to Weibull or exponential.
+## Need to look into this more.
+
+## Going to try the same with the flexsurv package - Sameer suggested checking this out.
+
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "weibull")
+```
+
+    ## Call:
+    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "weibull")
+    ## 
+    ## Estimates: 
+    ##        data mean  est        L95%       U95%       se         exp(est) 
+    ## shape         NA     1.1443     0.9711     1.3484     0.0958         NA
+    ## scale         NA   393.2628   143.0349  1081.2438   202.9332         NA
+    ## drug1     0.5000    -0.9135    -1.2934    -0.5336     0.1938     0.4011
+    ## age      36.1078    -0.0863    -0.1134    -0.0591     0.0139     0.9173
+    ##        L95%       U95%     
+    ## shape         NA         NA
+    ## scale         NA         NA
+    ## drug1     0.2743     0.5865
+    ## age       0.8928     0.9426
+    ## 
+    ## N = 102,  Events: 82,  Censored: 20
+    ## Total time at risk: 1174
+    ## Log-likelihood = -274.2114, df = 4
+    ## AIC = 556.4227
+
+``` r
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "exponential")
+```
+
+    ## Call:
+    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "exponential")
+    ## 
+    ## Estimates: 
+    ##        data mean  est       L95%      U95%      se        exp(est)
+    ## rate         NA    0.00248   0.00078   0.00791   0.00147        NA
+    ## drug1   0.50000    0.89449   0.46051   1.32847   0.22142   2.44609
+    ## age    36.10784    0.08785   0.05680   0.11889   0.01584   1.09182
+    ##        L95%      U95%    
+    ## rate         NA        NA
+    ## drug1   1.58489   3.77525
+    ## age     1.05845   1.12625
+    ## 
+    ## N = 102,  Events: 82,  Censored: 20
+    ## Total time at risk: 1174
+    ## Log-likelihood = -275.4197, df = 3
+    ## AIC = 556.8394
+
+``` r
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "lognormal")
+```
+
+    ## Call:
+    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "lognormal")
+    ## 
+    ## Estimates: 
+    ##          data mean  est      L95%     U95%     se       exp(est)  L95%   
+    ## meanlog       NA     5.3276   4.1482   6.5071   0.6018       NA        NA
+    ## sdlog         NA     1.0489   0.8995   1.2230   0.0822       NA        NA
+    ## drug1     0.5000    -0.8005  -1.2269  -0.3741   0.2176   0.4491    0.2932
+    ## age      36.1078    -0.0828  -0.1146  -0.0511   0.0162   0.9205    0.8917
+    ##          U95%   
+    ## meanlog       NA
+    ## sdlog         NA
+    ## drug1     0.6879
+    ## age       0.9502
+    ## 
+    ## N = 102,  Events: 82,  Censored: 20
+    ## Total time at risk: 1174
+    ## Log-likelihood = -273.6938, df = 4
+    ## AIC = 555.3876
+
+``` r
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis")
+```
+
+    ## Call:
+    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
+    ##     dist = "llogis")
+    ## 
+    ## Estimates: 
+    ##        data mean  est       L95%      U95%      se        exp(est)
+    ## shape        NA     1.6646    1.3928    1.9895    0.1514        NA
+    ## scale        NA   245.2482   78.1493  769.6380  143.1036        NA
+    ## drug1    0.5000    -0.8298   -1.2533   -0.4062    0.2161    0.4362
+    ## age     36.1078    -0.0863   -0.1171   -0.0556    0.0157    0.9173
+    ##        L95%      U95%    
+    ## shape        NA        NA
+    ## scale        NA        NA
+    ## drug1    0.2856    0.6662
+    ## age      0.8895    0.9459
+    ## 
+    ## N = 102,  Events: 82,  Censored: 20
+    ## Total time at risk: 1174
+    ## Log-likelihood = -274.2192, df = 4
+    ## AIC = 556.4383
+
+``` r
+## Getting the same results as before, except the direction of the exponential coefficient flips.
+##Not sure what this means. I'm going to stick with the normal method.
+
+##Plot the Curves with the KM Estimates
+
+
+## To do!
+```

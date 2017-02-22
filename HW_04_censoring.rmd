@@ -17,8 +17,9 @@ library(survival)
 library(tidyverse)
 library(survminer)
 library(ggfortify)
+library(flexsurv)
 ```
-<p>Incase you haven't seen it before, the "Tidyverse" is a set of packages that makes using R much better.</p>
+<p>Incase you haven't seen it before, the "tidyverse" is a set of packages that makes using R much better (In my opinion).</p>
 
 
 <p>Import the data and basic tidying</p>
@@ -37,12 +38,27 @@ data <- as_data_frame(data)
 data
 ```
 
+
+<p> Basic data exploration</p>
+```{r}
+## Checking normality of Age.
+hist(data$age)
+## Looks good to me
+
+#Checking how many had events
+table(data$censor)
+
+## Checking How many on each drug
+table(data$drug)
+## Balanced!
+```
+
 <p> Three majors sections:</p>
 
 <ol>
   <li>Non-Parametric: Kaplan Meier Estimates</li>
   <li>Semi-Parametric: Cox Proportional Hazards Model</li>
-  <li>Fully Parametric: Weibull or Fully Distributional Model</li>
+  <li>Fully Parametric: Weibull, Exponential, Log-Normal, Log-Logistic</li>
 </ol>
 
 
@@ -69,43 +85,111 @@ fit_KM_drug <- survfit(Surv(time, censor) ~ drug, data)
 fit_KM_drug %>% 
   summary()
 
+survdiff(Surv(time, censor) ~ drug, data)
+
 ## Try different survival plot methods
 fit_KM_drug %>% 
   autoplot(conf.int=F)
 
 fit_KM_drug %>% 
   ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
+
+
+## Let's get both the by drug and overall on the same plot
+plot(fit_KM, conf.int=F, xlab='Time (Months)', ylab='Survival', lwd=2)
+lines(fit_KM_drug, lty=c(2,2), lwd=c(2,2), col=c("#8E8E8E","#5CB2C8"))
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+text(40, 1, 'Log-rank p=0.000971')
+
 ```
 
 <h1>Semi-Parametric</h1>
 ```{r}
+## Without Age
 coxfit1 <- coxph(Surv(time, censor) ~ drug, data)
 coxfit1 %>% 
   summary()
 
+## With Age
+coxfit2 <- coxph(Surv(time, censor) ~ drug + age, data)
+coxfit2 %>% 
+  summary()
+
+## Check model Fit and Assumptions (PH)
+coxfit1 %>% 
+    AIC()
+
+coxfit1 %>% 
+  cox.zph() %>% 
+  plot()
+
+coxfit2 %>% 
+    AIC()
+
+coxfit2 %>% 
+  cox.zph() %>% 
+  plot()
+
+## Global test looks good. Plots look OK to me. Check Schoenfeld/Martingale Residuals next.
+##Age improves fit.
+
+## Plotting survival for the drug=1 group.
+
 autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
 
-## Need to Assess the Proportional Hazards Assumption
-coxfit1 %>% 
-  cox.zph()
-
-## Looks OK to me. Check Schoenfeld/Martingale Residuals next.
 ```
 
-<h1>Fully-Parametric (Accelerated Failure Time Models)</h1>
+<h1>Fully-Parametric</h1>
 ```{r}
 #Exponential Distribution
-fit_AFT_exp <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='exponential')
+fit_AFT_exp <- survreg(Surv(time, censor) ~ drug + age, data, dist='exponential')
 fit_AFT_exp %>% 
   summary()
 
+fit_AFT_exp %>% 
+    AIC()
+
 #Weibull Distribution
-fit_AFT_W <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='weibull')
+fit_AFT_W <- survreg(Surv(time, censor) ~ drug + age, data, dist='weibull')
 fit_AFT_W %>% 
   summary()
 
+fit_AFT_W %>% 
+    AIC()
+
 #Lognormal
-fit_AFT_lognorm <- survreg(Surv(time, censor) ~ as.factor(drug) + age, data, dist='lognormal')
+fit_AFT_lognorm <- survreg(Surv(time, censor) ~ drug + age, data, dist='lognormal')
 fit_AFT_lognorm %>% 
   summary()
+
+fit_AFT_lognorm %>% 
+    AIC()
+
+#Lognormal
+fit_AFT_loglog <- survreg(Surv(time, censor) ~ drug + age, data, dist='loglogistic')
+fit_AFT_loglog %>% 
+  summary()
+
+fit_AFT_loglog %>% 
+    AIC()
+
+## Not much difference in terms of AIC between the models. No clear winner. I would default to Weibull or exponential.
+## Need to look into this more.
+
+## Going to try the same with the flexsurv package - Sameer suggested checking this out.
+
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "weibull")
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "exponential")
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "lognormal")
+flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis")
+
+## Getting the same results as before, except the direction of the exponential coefficient flips.
+##Not sure what this means. I'm going to stick with the normal method.
+
+##Plot the Curves with the KM Estimates
+
+
+## To do!
+
 ```
+

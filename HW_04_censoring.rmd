@@ -118,6 +118,7 @@ text(40, 1, 'Log-rank p=0.000971')
 ## Side by Side KM Plots
 plot(fit_KM_drug, conf.int=T, xlab='Time (Months)', ylab='Survival', lwd=2, col=c("#8E8E8E","#5CB2C8"))
 legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+
 ```
 <p> This is completely descriptive, so I think I would always do this regardless of what modeling technique I chose in the end</p>
 
@@ -153,6 +154,10 @@ coxfit2 %>%
 plot(residuals(coxfit2, type='martingale'))
 plot(residuals(coxfit2, type='schoenfeld'))
 
+#Plotting the Cumulative Hazard
+cumhaz.plot <- survfit(Surv(time, censor) ~ drug, data, type='fleming') 
+
+plot(cumhaz.plot, lty=2:3, fun='cumhaz', xlab='Time (Months)', ylab='Cumulative Hazard')
 ## Global test looks good. Plots look OK to me. 
 ## Residuals look good.
 ## Age improves fit.
@@ -222,6 +227,12 @@ fit4 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis
 
 ## Getting the same results as before, except the direction of the exponential coefficient flips.
 ##Not sure what this means. I'm going to stick with the normal method.
+
+##Let's check some Hazard functions
+plot(fit1, type='cumhaz')
+plot(fit2, type='cumhaz')
+plot(fit3, type='cumhaz') ## Looks like Log-Norm or LogLog fits this the best! More Justification!!!
+plot(fit4, type='cumhaz')
 
 ##Plot the Curves with the KM Estimates
 ##I'll plot each seperately and evaluate fit, then show the final one.

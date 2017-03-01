@@ -479,6 +479,15 @@ plot(residuals(coxfit2, type='schoenfeld'))
 ![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-5.png)
 
 ``` r
+#Plotting the Cumulative Hazard
+cumhaz.plot <- survfit(Surv(time, censor) ~ drug, data, type='fleming') 
+
+plot(cumhaz.plot, lty=2:3, fun='cumhaz', xlab='Time (Months)', ylab='Cumulative Hazard')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-6.png)
+
+``` r
 ## Global test looks good. Plots look OK to me. 
 ## Residuals look good.
 ## Age improves fit.
@@ -490,7 +499,7 @@ autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
     ## Warning in model.frame.default(Terms2, data = newdata, na.action =
     ## na.action, : variable 'drug' is not a factor
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-6.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-7.png)
 
 ``` r
 ##Survival for Age = 50
@@ -500,7 +509,7 @@ autoplot(survfit(coxfit2, newdata=data.frame(drug=0, age=50)), conf.int=F)
     ## Warning in model.frame.default(Terms2, data = newdata, na.action =
     ## na.action, : variable 'drug' is not a factor
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-7.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-8.png)
 
 ``` r
 autoplot(survfit(coxfit2, newdata=data.frame(drug=1, age=50)), conf.int=F)
@@ -509,7 +518,7 @@ autoplot(survfit(coxfit2, newdata=data.frame(drug=1, age=50)), conf.int=F)
     ## Warning in model.frame.default(Terms2, data = newdata, na.action =
     ## na.action, : variable 'drug' is not a factor
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-8.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-9.png)
 <p>
 Assumptions look good, fit is reasonable. I'll compare it to the parametric curves at the end
 </p>
@@ -681,6 +690,31 @@ fit4 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis
 ## Getting the same results as before, except the direction of the exponential coefficient flips.
 ##Not sure what this means. I'm going to stick with the normal method.
 
+##Let's check some Hazard functions
+plot(fit1, type='cumhaz')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-5.png)
+
+``` r
+plot(fit2, type='cumhaz')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-6.png)
+
+``` r
+plot(fit3, type='cumhaz') ## Looks like Log-Norm or LogLog fits this the best! More Justification!!!
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-7.png)
+
+``` r
+plot(fit4, type='cumhaz')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-8.png)
+
+``` r
 ##Plot the Curves with the KM Estimates
 ##I'll plot each seperately and evaluate fit, then show the final one.
 
@@ -689,7 +723,7 @@ plot(fit1, conf.int=T, lty = 1, xlab='Time (Months)', ylab='Survival')
 legend('topright', c('KM', 'Exponential'), lwd=c(1,2), lty=1, col=c("black","red"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-5.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-9.png)
 
 ``` r
 plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival')
@@ -698,7 +732,7 @@ lines(predict(fit_AFT_exp, newdata=list(drug='1', age=36),type="quantile",p=seq(
 legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-6.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-10.png)
 
 ``` r
 #Wei
@@ -707,7 +741,7 @@ lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
 legend('topright', c('KM','Cox-PH', 'Weibull'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-7.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-11.png)
 
 ``` r
 plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2), lwd=2)
@@ -723,7 +757,7 @@ text(20, 0.45, 'Drug 0')
 text(5, 0.15, 'Drug 1')
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-8.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-12.png)
 
 ``` r
 #Log-Normal
@@ -732,7 +766,7 @@ lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
 legend('topright', c('KM','Cox-PH', 'Log-Normal'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-9.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-13.png)
 
 ``` r
 plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2), lwd=2)
@@ -748,7 +782,7 @@ text(20, 0.45, 'Drug 0')
 text(5, 0.15, 'Drug 1')
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-10.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-14.png)
 
 ``` r
 #Log-Logistic
@@ -756,7 +790,7 @@ plot(fit3, conf.int=T, lty = 1, xlab='Time (Months)', ylab='Survival')
 legend('topright', c('KM', 'Log-Logistic'), lwd=c(1,2), lty=1, col=c("black","red"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-11.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-15.png)
 
 ``` r
 plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival')
@@ -765,7 +799,7 @@ lines(predict(fit_AFT_loglog, newdata=list(drug='1', age=36),type="quantile",p=s
 legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-12.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-16.png)
 
 ``` r
 ## Both methods show that at about 10 months, there will be 0% survival. 
@@ -777,7 +811,7 @@ plot(fit3, newdata=data.frame(drug='0', age=50), col=c("#8E8E8E"))
 lines(fit3, newdata=data.frame(drug='1', age=50), col=c("#5CB2C8"))
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-13.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-17.png)
 
 ``` r
 ## Let's combine into a plot for reporting.
@@ -792,7 +826,7 @@ text(10, 0.25, 'Drug 0')
 text(2, 0.15, 'Drug 1')
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-14.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-18.png)
 <p>
 Ideally, I would like to find some sort of plot that tests the log-normal assumption. But I have searched high and low and can't find anything. Visual inspection will just have to do, along with AIC.
 </p>

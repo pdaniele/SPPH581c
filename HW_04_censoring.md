@@ -702,7 +702,7 @@ legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8
 
 ``` r
 #Wei
-plot(fit2, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8')
+plot(fit2, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8', lwd=2)
 lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
 legend('topright', c('KM','Cox-PH', 'Weibull'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
 ```
@@ -710,14 +710,14 @@ legend('topright', c('KM','Cox-PH', 'Weibull'), lwd=c(2,2,2), lty=1, col=c('blac
 ![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-7.png)
 
 ``` r
-plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2))
-lines(predict(fit_AFT_W, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
-lines(predict(fit_AFT_W, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, lty=2)
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2), lwd=2)
+lines(predict(fit_AFT_W, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2)
+lines(predict(fit_AFT_W, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2, lty=2)
 
 ##Add the Cox predictions
-lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
-lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=2)
-legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(1,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#8E8E8E", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#8E8E8E", lty=2)
+legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(2,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
 
 text(20, 0.45, 'Drug 0')
 text(5, 0.15, 'Drug 1')
@@ -727,7 +727,7 @@ text(5, 0.15, 'Drug 1')
 
 ``` r
 #Log-Normal
-plot(fit3, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8')
+plot(fit3, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8', lwd=2)
 lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
 legend('topright', c('KM','Cox-PH', 'Log-Normal'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
 ```
@@ -735,14 +735,14 @@ legend('topright', c('KM','Cox-PH', 'Log-Normal'), lwd=c(2,2,2), lty=1, col=c('b
 ![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-9.png)
 
 ``` r
-plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2))
-lines(predict(fit_AFT_lognorm, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
-lines(predict(fit_AFT_lognorm, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, lty=2)
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2), lwd=2)
+lines(predict(fit_AFT_lognorm, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2)
+lines(predict(fit_AFT_lognorm, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2, lty=2)
 
 ##Add the Cox predictions
-lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
-lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=2)
-legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(1,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#8E8E8E", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#8E8E8E", lty=2)
+legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(2,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
 
 text(20, 0.45, 'Drug 0')
 text(5, 0.15, 'Drug 1')

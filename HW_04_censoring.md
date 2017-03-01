@@ -39,8 +39,8 @@ Incase you haven't seen it before, the "tidyverse" is a set of packages that mak
 Import the data and basic tidying
 </p>
 ``` r
-data <- read.csv('C:/Users/pdaniele/Desktop/SPPH 581c/Assignment 4/alzheimers.csv', header=T)
-str(data)
+temp <- read.csv('C:/Users/pdaniele/Desktop/SPPH 581c/Assignment 4/alzheimers.csv', header=T)
+str(temp)
 ```
 
     ## 'data.frame':    102 obs. of  7 variables:
@@ -56,11 +56,11 @@ str(data)
 #Note to self, dates are factors. I don't think we need them, so I won't do anything about them now.
 
 #Change drug to a factor
-data <- data %>% 
+temp2 <- temp %>% 
   mutate(drug=factor(drug))
 
 # Change it to a tibble for easier processing
-data <- as_data_frame(data)
+data <- as_data_frame(temp2)
 data
 ```
 
@@ -87,7 +87,7 @@ Basic data exploration
 hist(data$age)
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-2-1.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
 ``` r
 ## Looks good to me
@@ -111,6 +111,92 @@ table(data$drug)
 
 ``` r
 ## Balanced!
+
+## Check the association between time and censor, and age as per Jason's recommendation
+fit1 <- lm(time ~ age, data=data)
+summary(fit1)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = time ~ age, data = data)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -21.201  -7.884  -3.979   4.040  45.376 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  49.7032     7.3537   6.759 9.40e-10 ***
+    ## age          -1.0578     0.2003  -5.282 7.48e-07 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 13.51 on 100 degrees of freedom
+    ## Multiple R-squared:  0.2181, Adjusted R-squared:  0.2103 
+    ## F-statistic:  27.9 on 1 and 100 DF,  p-value: 7.484e-07
+
+``` r
+## Pretty strong negative association. Makes sense as older people would die younger.
+fit2 <- glm(censor~age, data=data)
+summary(fit2)
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = censor ~ age, data = data)
+    ## 
+    ## Deviance Residuals: 
+    ##     Min       1Q   Median       3Q      Max  
+    ## -0.8673   0.1263   0.1840   0.2160   0.2929  
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)   
+    ## (Intercept) 0.572529   0.217017   2.638  0.00967 **
+    ## age         0.006408   0.005910   1.084  0.28083   
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for gaussian family taken to be 0.1589158)
+    ## 
+    ##     Null deviance: 16.078  on 101  degrees of freedom
+    ## Residual deviance: 15.892  on 100  degrees of freedom
+    ## AIC: 105.83
+    ## 
+    ## Number of Fisher Scoring iterations: 2
+
+``` r
+## Not sig. Good! Wouldn't want to see any differences in people who are censored. 
+## This helps to validate our assumption of non-informative censoring.
+fit3 <- glm(censor~drug, data=data)
+summary(fit3)
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = censor ~ drug, data = data)
+    ## 
+    ## Deviance Residuals: 
+    ##     Min       1Q   Median       3Q      Max  
+    ## -0.8235   0.1765   0.1765   0.2157   0.2157  
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  0.82353    0.05608  14.685   <2e-16 ***
+    ## drug1       -0.03922    0.07931  -0.494    0.622    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for gaussian family taken to be 0.1603922)
+    ## 
+    ##     Null deviance: 16.078  on 101  degrees of freedom
+    ## Residual deviance: 16.039  on 100  degrees of freedom
+    ## AIC: 106.77
+    ## 
+    ## Number of Fisher Scoring iterations: 2
+
+``` r
+## Same for Drug.
 ```
 
 <p>
@@ -178,14 +264,14 @@ fit_KM %>%
   ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-1.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 ``` r
 fit_KM %>% 
   autoplot(conf.int=F)
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-2.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-2.png)
 
 ``` r
 ## By Drug
@@ -263,14 +349,14 @@ fit_KM_drug %>%
   autoplot(conf.int=F)
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-3.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-3.png)
 
 ``` r
 fit_KM_drug %>% 
   ggsurvplot(risk.table = TRUE, ggtheme=theme_classic())
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-4.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-4.png)
 
 ``` r
 ## Let's get both the by drug and overall on the same plot
@@ -280,8 +366,18 @@ legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8
 text(40, 1, 'Log-rank p=0.000971')
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-3-5.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-5.png)
 
+``` r
+## Side by Side KM Plots
+plot(fit_KM_drug, conf.int=T, xlab='Time (Months)', ylab='Survival', lwd=2, col=c("#8E8E8E","#5CB2C8"))
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-6.png)
+<p>
+This is completely descriptive, so I think I would always do this regardless of what modeling technique I chose in the end
+</p>
 <h1>
 Semi-Parametric
 </h1>
@@ -353,7 +449,7 @@ coxfit1 %>%
   plot()
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 ``` r
 coxfit2 %>% 
@@ -368,22 +464,55 @@ coxfit2 %>%
   plot()
 ```
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-2.png)![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-3.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-2.png)![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-3.png)
 
 ``` r
-## Global test looks good. Plots look OK to me. Check Schoenfeld/Martingale Residuals next.
-##Age improves fit.
+plot(residuals(coxfit2, type='martingale'))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-4.png)
+
+``` r
+plot(residuals(coxfit2, type='schoenfeld'))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-5.png)
+
+``` r
+## Global test looks good. Plots look OK to me. 
+## Residuals look good.
+## Age improves fit.
 
 ## Plotting survival for the drug=1 group.
-
 autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
 ```
 
     ## Warning in model.frame.default(Terms2, data = newdata, na.action =
     ## na.action, : variable 'drug' is not a factor
 
-![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-4-4.png)
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-6.png)
 
+``` r
+##Survival for Age = 50
+autoplot(survfit(coxfit2, newdata=data.frame(drug=0, age=50)), conf.int=F)
+```
+
+    ## Warning in model.frame.default(Terms2, data = newdata, na.action =
+    ## na.action, : variable 'drug' is not a factor
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-7.png)
+
+``` r
+autoplot(survfit(coxfit2, newdata=data.frame(drug=1, age=50)), conf.int=F)
+```
+
+    ## Warning in model.frame.default(Terms2, data = newdata, na.action =
+    ## na.action, : variable 'drug' is not a factor
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-5-8.png)
+<p>
+Assumptions look good, fit is reasonable. I'll compare it to the parametric curves at the end
+</p>
 <h1>
 Fully-Parametric
 </h1>
@@ -410,6 +539,12 @@ fit_AFT_exp %>%
     ##  Chisq= 49.64 on 2 degrees of freedom, p= 1.7e-11 
     ## Number of Newton-Raphson Iterations: 4 
     ## n= 102
+
+``` r
+plot(residuals(fit_AFT_exp, type="deviance"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 ``` r
 fit_AFT_exp %>% 
@@ -451,6 +586,12 @@ fit_AFT_W %>%
     ## [1] 556.4227
 
 ``` r
+plot(residuals(fit_AFT_W, type="deviance"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-2.png)
+
+``` r
 #Lognormal
 fit_AFT_lognorm <- survreg(Surv(time, censor) ~ drug + age, data, dist='lognormal')
 fit_AFT_lognorm %>% 
@@ -481,6 +622,12 @@ fit_AFT_lognorm %>%
 ```
 
     ## [1] 555.3876
+
+``` r
+plot(residuals(fit_AFT_lognorm, type="deviance"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-3.png)
 
 ``` r
 #Lognormal
@@ -515,114 +662,137 @@ fit_AFT_loglog %>%
     ## [1] 556.4383
 
 ``` r
+plot(residuals(fit_AFT_loglog, type="deviance"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-4.png)
+
+``` r
 ## Not much difference in terms of AIC between the models. No clear winner. I would default to Weibull or exponential.
 ## Need to look into this more.
 
 ## Going to try the same with the flexsurv package - Sameer suggested checking this out.
 
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "weibull")
-```
+fit1 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "weibull")
+fit2 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "exponential")
+fit3 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "lognormal")
+fit4 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis")
 
-    ## Call:
-    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
-    ##     dist = "weibull")
-    ## 
-    ## Estimates: 
-    ##        data mean  est        L95%       U95%       se         exp(est) 
-    ## shape         NA     1.1443     0.9711     1.3484     0.0958         NA
-    ## scale         NA   393.2628   143.0349  1081.2438   202.9332         NA
-    ## drug1     0.5000    -0.9135    -1.2934    -0.5336     0.1938     0.4011
-    ## age      36.1078    -0.0863    -0.1134    -0.0591     0.0139     0.9173
-    ##        L95%       U95%     
-    ## shape         NA         NA
-    ## scale         NA         NA
-    ## drug1     0.2743     0.5865
-    ## age       0.8928     0.9426
-    ## 
-    ## N = 102,  Events: 82,  Censored: 20
-    ## Total time at risk: 1174
-    ## Log-likelihood = -274.2114, df = 4
-    ## AIC = 556.4227
-
-``` r
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "exponential")
-```
-
-    ## Call:
-    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
-    ##     dist = "exponential")
-    ## 
-    ## Estimates: 
-    ##        data mean  est       L95%      U95%      se        exp(est)
-    ## rate         NA    0.00248   0.00078   0.00791   0.00147        NA
-    ## drug1   0.50000    0.89449   0.46051   1.32847   0.22142   2.44609
-    ## age    36.10784    0.08785   0.05680   0.11889   0.01584   1.09182
-    ##        L95%      U95%    
-    ## rate         NA        NA
-    ## drug1   1.58489   3.77525
-    ## age     1.05845   1.12625
-    ## 
-    ## N = 102,  Events: 82,  Censored: 20
-    ## Total time at risk: 1174
-    ## Log-likelihood = -275.4197, df = 3
-    ## AIC = 556.8394
-
-``` r
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "lognormal")
-```
-
-    ## Call:
-    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
-    ##     dist = "lognormal")
-    ## 
-    ## Estimates: 
-    ##          data mean  est      L95%     U95%     se       exp(est)  L95%   
-    ## meanlog       NA     5.3276   4.1482   6.5071   0.6018       NA        NA
-    ## sdlog         NA     1.0489   0.8995   1.2230   0.0822       NA        NA
-    ## drug1     0.5000    -0.8005  -1.2269  -0.3741   0.2176   0.4491    0.2932
-    ## age      36.1078    -0.0828  -0.1146  -0.0511   0.0162   0.9205    0.8917
-    ##          U95%   
-    ## meanlog       NA
-    ## sdlog         NA
-    ## drug1     0.6879
-    ## age       0.9502
-    ## 
-    ## N = 102,  Events: 82,  Censored: 20
-    ## Total time at risk: 1174
-    ## Log-likelihood = -273.6938, df = 4
-    ## AIC = 555.3876
-
-``` r
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis")
-```
-
-    ## Call:
-    ## flexsurvreg(formula = Surv(time, censor) ~ drug + age, data = data, 
-    ##     dist = "llogis")
-    ## 
-    ## Estimates: 
-    ##        data mean  est       L95%      U95%      se        exp(est)
-    ## shape        NA     1.6646    1.3928    1.9895    0.1514        NA
-    ## scale        NA   245.2482   78.1493  769.6380  143.1036        NA
-    ## drug1    0.5000    -0.8298   -1.2533   -0.4062    0.2161    0.4362
-    ## age     36.1078    -0.0863   -0.1171   -0.0556    0.0157    0.9173
-    ##        L95%      U95%    
-    ## shape        NA        NA
-    ## scale        NA        NA
-    ## drug1    0.2856    0.6662
-    ## age      0.8895    0.9459
-    ## 
-    ## N = 102,  Events: 82,  Censored: 20
-    ## Total time at risk: 1174
-    ## Log-likelihood = -274.2192, df = 4
-    ## AIC = 556.4383
-
-``` r
 ## Getting the same results as before, except the direction of the exponential coefficient flips.
 ##Not sure what this means. I'm going to stick with the normal method.
 
 ##Plot the Curves with the KM Estimates
+##I'll plot each seperately and evaluate fit, then show the final one.
 
-
-## To do!
+#Exp
+plot(fit1, conf.int=T, lty = 1, xlab='Time (Months)', ylab='Survival')
+legend('topright', c('KM', 'Exponential'), lwd=c(1,2), lty=1, col=c("black","red"))
 ```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-5.png)
+
+``` r
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival')
+lines(predict(fit_AFT_exp, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_exp, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2)
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-6.png)
+
+``` r
+#Wei
+plot(fit2, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8')
+lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
+legend('topright', c('KM','Cox-PH', 'Weibull'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-7.png)
+
+``` r
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2))
+lines(predict(fit_AFT_W, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_W, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, lty=2)
+
+##Add the Cox predictions
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=2)
+legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(1,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
+
+text(20, 0.45, 'Drug 0')
+text(5, 0.15, 'Drug 1')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-8.png)
+
+``` r
+#Log-Normal
+plot(fit3, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8')
+lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
+legend('topright', c('KM','Cox-PH', 'Log-Normal'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-9.png)
+
+``` r
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2))
+lines(predict(fit_AFT_lognorm, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_lognorm, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, lty=2)
+
+##Add the Cox predictions
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=2)
+legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(1,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
+
+text(20, 0.45, 'Drug 0')
+text(5, 0.15, 'Drug 1')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-10.png)
+
+``` r
+#Log-Logistic
+plot(fit3, conf.int=T, lty = 1, xlab='Time (Months)', ylab='Survival')
+legend('topright', c('KM', 'Log-Logistic'), lwd=c(1,2), lty=1, col=c("black","red"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-11.png)
+
+``` r
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival')
+lines(predict(fit_AFT_loglog, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_loglog, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2)
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-12.png)
+
+``` r
+## Both methods show that at about 10 months, there will be 0% survival. 
+## Similar steepness to the curve too.
+
+
+## Survival of someone who is 50 at drug entry.
+plot(fit3, newdata=data.frame(drug='0', age=50), col=c("#8E8E8E"))
+lines(fit3, newdata=data.frame(drug='1', age=50), col=c("#5CB2C8"))
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-13.png)
+
+``` r
+## Let's combine into a plot for reporting.
+
+plot(predict(fit_AFT_lognorm, newdata=list(drug='0', age=50),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, type='l', xlab='Time (Months)', ylab='Survival')
+lines(predict(fit_AFT_lognorm, newdata=list(drug='1', age=50),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=50)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=50)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+legend('topright', c('Cox-PH', 'Log-Normal'), col=c('#5CB2C8','#8E8E8E'), lwd=2)
+
+text(10, 0.25, 'Drug 0')
+text(2, 0.15, 'Drug 1')
+```
+
+![](HW_04_censoring_files/figure-markdown_github/unnamed-chunk-6-14.png)
+<p>
+Ideally, I would like to find some sort of plot that tests the log-normal assumption. But I have searched high and low and can't find anything. Visual inspection will just have to do, along with AIC.
+</p>

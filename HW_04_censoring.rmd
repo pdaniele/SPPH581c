@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 <p>Load Libraries </p>
-```{r cars}
+```{r}
 library(survival)
 library(tidyverse)
 library(survminer)
@@ -24,17 +24,17 @@ library(flexsurv)
 
 <p>Import the data and basic tidying</p>
 ```{r}
-data <- read.csv('C:/Users/pdaniele/Desktop/SPPH 581c/Assignment 4/alzheimers.csv', header=T)
-str(data)
+temp <- read.csv('C:/Users/pdaniele/Desktop/SPPH 581c/Assignment 4/alzheimers.csv', header=T)
+str(temp)
 
 #Note to self, dates are factors. I don't think we need them, so I won't do anything about them now.
 
 #Change drug to a factor
-data <- data %>% 
+temp2 <- temp %>% 
   mutate(drug=factor(drug))
 
 # Change it to a tibble for easier processing
-data <- as_data_frame(data)
+data <- as_data_frame(temp2)
 data
 ```
 
@@ -51,6 +51,20 @@ table(data$censor)
 ## Checking How many on each drug
 table(data$drug)
 ## Balanced!
+
+## Check the association between time and censor, and age as per Jason's recommendation
+fit1 <- lm(time ~ age, data=data)
+summary(fit1)
+## Pretty strong negative association. Makes sense as older people would die younger.
+fit2 <- glm(censor~age, data=data)
+summary(fit2)
+
+## Not sig. Good! Wouldn't want to see any differences in people who are censored. 
+## This helps to validate our assumption of non-informative censoring.
+fit3 <- glm(censor~drug, data=data)
+summary(fit3)
+## Same for Drug.
+
 ```
 
 <p> Three majors sections:</p>
@@ -101,10 +115,16 @@ lines(fit_KM_drug, lty=c(2,2), lwd=c(2,2), col=c("#8E8E8E","#5CB2C8"))
 legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
 text(40, 1, 'Log-rank p=0.000971')
 
+## Side by Side KM Plots
+plot(fit_KM_drug, conf.int=T, xlab='Time (Months)', ylab='Survival', lwd=2, col=c("#8E8E8E","#5CB2C8"))
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
 ```
+<p> This is completely descriptive, so I think I would always do this regardless of what modeling technique I chose in the end</p>
+
 
 <h1>Semi-Parametric</h1>
 ```{r}
+
 ## Without Age
 coxfit1 <- coxph(Surv(time, censor) ~ drug, data)
 coxfit1 %>% 
@@ -130,14 +150,23 @@ coxfit2 %>%
   cox.zph() %>% 
   plot()
 
-## Global test looks good. Plots look OK to me. Check Schoenfeld/Martingale Residuals next.
-##Age improves fit.
+plot(residuals(coxfit2, type='martingale'))
+plot(residuals(coxfit2, type='schoenfeld'))
+
+## Global test looks good. Plots look OK to me. 
+## Residuals look good.
+## Age improves fit.
 
 ## Plotting survival for the drug=1 group.
-
 autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
 
+##Survival for Age = 50
+autoplot(survfit(coxfit2, newdata=data.frame(drug=0, age=50)), conf.int=F)
+autoplot(survfit(coxfit2, newdata=data.frame(drug=1, age=50)), conf.int=F)
+
 ```
+<p> Assumptions look good, fit is reasonable. I'll compare it to the parametric curves at the end</p>
+
 
 <h1>Fully-Parametric</h1>
 ```{r}
@@ -145,6 +174,8 @@ autoplot(survfit(coxfit1, newdata=data.frame(drug=1)), conf.int=F)
 fit_AFT_exp <- survreg(Surv(time, censor) ~ drug + age, data, dist='exponential')
 fit_AFT_exp %>% 
   summary()
+
+plot(residuals(fit_AFT_exp, type="deviance"))
 
 fit_AFT_exp %>% 
     AIC()
@@ -157,6 +188,8 @@ fit_AFT_W %>%
 fit_AFT_W %>% 
     AIC()
 
+plot(residuals(fit_AFT_W, type="deviance"))
+
 #Lognormal
 fit_AFT_lognorm <- survreg(Surv(time, censor) ~ drug + age, data, dist='lognormal')
 fit_AFT_lognorm %>% 
@@ -164,6 +197,8 @@ fit_AFT_lognorm %>%
 
 fit_AFT_lognorm %>% 
     AIC()
+
+plot(residuals(fit_AFT_lognorm, type="deviance"))
 
 #Lognormal
 fit_AFT_loglog <- survreg(Surv(time, censor) ~ drug + age, data, dist='loglogistic')
@@ -173,23 +208,96 @@ fit_AFT_loglog %>%
 fit_AFT_loglog %>% 
     AIC()
 
+plot(residuals(fit_AFT_loglog, type="deviance"))
+
 ## Not much difference in terms of AIC between the models. No clear winner. I would default to Weibull or exponential.
 ## Need to look into this more.
 
 ## Going to try the same with the flexsurv package - Sameer suggested checking this out.
 
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "weibull")
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "exponential")
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "lognormal")
-flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis")
+fit1 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "weibull")
+fit2 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "exponential")
+fit3 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "lognormal")
+fit4 <- flexsurvreg(Surv(time, censor) ~ drug + age, data = data, dist = "llogis")
 
 ## Getting the same results as before, except the direction of the exponential coefficient flips.
 ##Not sure what this means. I'm going to stick with the normal method.
 
 ##Plot the Curves with the KM Estimates
+##I'll plot each seperately and evaluate fit, then show the final one.
+
+#Exp
+plot(fit1, conf.int=T, lty = 1, xlab='Time (Months)', ylab='Survival')
+legend('topright', c('KM', 'Exponential'), lwd=c(1,2), lty=1, col=c("black","red"))
+
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival')
+lines(predict(fit_AFT_exp, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_exp, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2)
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+
+#Wei
+plot(fit2, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8')
+lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
+legend('topright', c('KM','Cox-PH', 'Weibull'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
 
 
-## To do!
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2))
+lines(predict(fit_AFT_W, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_W, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, lty=2)
+
+##Add the Cox predictions
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=2)
+legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(1,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
+
+text(20, 0.45, 'Drug 0')
+text(5, 0.15, 'Drug 1')
+
+
+#Log-Normal
+plot(fit3, conf.int=F, lty = 1, xlab='Time (Months)', ylab='Survival', ci=F, col='#5CB2C8')
+lines(survfit(coxfit2), conf.int=F, col='#8E8E8E', lwd=2)
+legend('topright', c('KM','Cox-PH', 'Log-Normal'), lwd=c(2,2,2), lty=1, col=c('black',"#8E8E8E","#5CB2C8"))
+
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival', lty=c(1,2))
+lines(predict(fit_AFT_lognorm, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_lognorm, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, lty=2)
+
+##Add the Cox predictions
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=36)), conf.int=F, lwd=2, col="#5CB2C8", lty=2)
+legend('topright', c('KM', 'Cox-PH','Log-Normal'), lwd=c(1,2,2), lty=c(1,1,1), col=c('black' ,"#8E8E8E","#5CB2C8"))
+
+text(20, 0.45, 'Drug 0')
+text(5, 0.15, 'Drug 1')
+
+#Log-Logistic
+plot(fit3, conf.int=T, lty = 1, xlab='Time (Months)', ylab='Survival')
+legend('topright', c('KM', 'Log-Logistic'), lwd=c(1,2), lty=1, col=c("black","red"))
+
+plot(fit_KM_drug, conf.int=F, xlab='Time (Months)', ylab='Survival')
+lines(predict(fit_AFT_loglog, newdata=list(drug='0', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(predict(fit_AFT_loglog, newdata=list(drug='1', age=36),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#5CB2C8", lwd=2)
+legend('topright', c('Drug 0', 'Drug 1'), lwd=2, lty=2, col=c("#8E8E8E","#5CB2C8"))
+
+## Both methods show that at about 10 months, there will be 0% survival. 
+## Similar steepness to the curve too.
+
+
+## Survival of someone who is 50 at drug entry.
+plot(fit3, newdata=data.frame(drug='0', age=50), col=c("#8E8E8E"))
+lines(fit3, newdata=data.frame(drug='1', age=50), col=c("#5CB2C8"))
+
+## Let's combine into a plot for reporting.
+
+plot(predict(fit_AFT_lognorm, newdata=list(drug='0', age=50),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2, type='l', xlab='Time (Months)', ylab='Survival')
+lines(predict(fit_AFT_lognorm, newdata=list(drug='1', age=50),type="quantile",p=seq(.01,.99,by=.01)),seq(.99,.01,by=-.01),col="#8E8E8E", lwd=2)
+lines(survfit(coxfit2, newdata=data.frame(drug='0', age=50)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+lines(survfit(coxfit2, newdata=data.frame(drug='1', age=50)), conf.int=F, lwd=2, col="#5CB2C8", lty=1)
+legend('topright', c('Cox-PH', 'Log-Normal'), col=c('#5CB2C8','#8E8E8E'), lwd=2)
+
+text(10, 0.25, 'Drug 0')
+text(2, 0.15, 'Drug 1')
 
 ```
-
+<p> Ideally, I would like to find some sort of plot that tests the log-normal assumption. But I have searched high and low and can't find anything. Visual inspection will just have to do, along with AIC.</p>
